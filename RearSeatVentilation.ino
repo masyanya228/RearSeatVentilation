@@ -1,7 +1,6 @@
 #include <Wire.h>
 
 bool isDebug=false;
-int debugMode=0;
 
 // адрес
 #define SLAVE_ADDR 20
@@ -13,12 +12,18 @@ int debugMode=0;
 #define REG_GetErrorCount 0x05
 #define REG_GetNextError 0x06
 
-#define PIN_L_Control 1
-#define PIN_R_Control 1
+#define PIN_L_Control A6
+#define PIN_R_Control A7
 
 int L_Mode=0;
 int R_Mode=0;
-int LastCheck=0;
+
+byte lowSpeed=125;
+byte midSpeed=180;
+byte highSpeed=255;
+
+byte modeSpeed[]={0, lowSpeed, midSpeed, highSpeed};
+byte modeSeq[]={0, 3, 2, 1};
 
 // последняя выбранная команда
 // в обработчике приёма
@@ -60,11 +65,9 @@ void requestCb() {
 }
 
 void setup() {
-  LastCheck=millis();
   pinMode(PIN_L_Control, OUTPUT);
   pinMode(PIN_R_Control, OUTPUT);
   Serial.begin(9600);
-  // put your setup code here, to run once:
   Wire.begin(SLAVE_ADDR);
 
   Wire.onReceive(receiveCb);
@@ -72,7 +75,7 @@ void setup() {
 }
 
 void loop() {
-  int 
+  
 }
 
 void CatchErrors(){
@@ -85,38 +88,50 @@ void SaveError(){
 
 //0-left; 1-right
 void ClickHardware(int seatNum){
-  if(isDebug)
-  {
-    debugMode++;
-    if(debugMode>2)
-      debugMode = 0;
-  }
-
   if(seatNum==0)
   {
-    L_Mode
+    L_Mode=GetNextMode(L_Mode);
+    logI("Seat #"+seatNum, L_Mode);
+    analogWrite(PIN_L_Control, modeSpeed[L_Mode]);
   }
-    analogWrite(PIN_L_SWITCH);
   else if(seatNum==1)
-    analogWrite(PIN_R_SWITCH);
+  {
+    R_Mode=GetNextMode(R_Mode);
+    logI("Seat #"+seatNum, R_Mode);
+    analogWrite(PIN_R_Control, modeSpeed[R_Mode]);
+  }
+}
+
+//Возвращает номер следующего режима. modeSpeed[result] - следующая скокрость вращения
+int GetNextMode(int mode){
+  int i=0;
+  while(i<4){
+    if(modeSeq[i]==mode){
+      break;
+    }
+  }
+  i++;
+  if(i>3) i=0;
+  return modeSeq[i];
 }
 
 int GetIndicator(int seatNum){
-  if(isDebug)
-  {
-    Serial.println(debugMode);
-    return debugMode;
-  }
-
   if(seatNum==0)
   {
-    int L1=analogRead(PIN_L_IND_1);
-    int L2=analogRead(PIN_L_IND_2);
-    
+    logI("Seat #"+seatNum, L_Mode);
+    return L_Mode;
   }
   else if(seatNum==1)
   {
-    int R1=analogRead(PIN_R_IND_1);
-    int R2=analogRead(PIN_R_IND_2);
+    logI("Seat #"+seatNum, R_Mode);
+    return R_Mode;
   }
+}
+
+void logI(String str, int i){
+  if(!isDebug)
+    return;
+  Serial.print(str);
+  Serial.print(" : ");
+  Serial.println(i);
 }
