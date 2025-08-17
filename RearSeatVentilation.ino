@@ -1,6 +1,7 @@
 #include <Wire.h>
 
 bool isDebug=false;
+bool isTest=true;
 
 // адрес
 #define SLAVE_ADDR 20
@@ -75,7 +76,12 @@ void setup() {
 }
 
 void loop() {
-  
+  if(isTest)
+  {
+    delay(2000);
+    ClickHardware(0);
+    ClickHardware(1);
+  }
 }
 
 void CatchErrors(){
