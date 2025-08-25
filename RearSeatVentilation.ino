@@ -170,6 +170,11 @@ int GetIndicator(int seatNum){
   }
 }
 
+void SetupErrors(){
+  errors[0].code=11;
+  errors[1].code=12;
+}
+
 void logI(String str, int i){
   if(!isDebug)
     return;
