@@ -27,15 +27,11 @@ byte highSpeed=255;
 int modeSpeed[]={0, lowSpeed, midSpeed, highSpeed};
 int modeSeq[]={0, 3, 2, 1};
 
-// последняя выбранная команда
-// в обработчике приёма
-uint8_t cmd = 0;
-// счётчик сообщений
-uint8_t counter = 0;
+uint8_t cmd = 0; //последняя команда
+uint8_t counter = 0; // счётчик сообщений
 
 uint32_t lastMessage=0;
-//30 секунд таймаута
-#define I2C_NoInputTimeOut 30000;
+const int I2C_NoInputTimeOut = 30000; //30 секунд таймаута
 bool isOnline=false;
 bool isVoid=false;
 
@@ -45,8 +41,8 @@ struct Error{
   uint8_t times=0;
 };
 
-/* 300 - Связь потеряна
- * 301 - Связь не установлена
+/* 11 - Связь не установлена
+ * 12 - Связь потеряна
  */
 Error errors[2];
 int sizeErr;
@@ -64,15 +60,14 @@ void receiveCb(int amount) {
     case REG_L_MODE:
       ClickHardware(0);
       break;
-
     case REG_R_MODE:
       ClickHardware(1);
       break;
-        
+    case REG_L_GetStatus: break;
+    case REG_R_GetStatus: break;
     case REG_GetNextError:
       nextError=Wire.read();
       break;
-
     case REG_GetErrorCount: break;
   }
 }
@@ -99,14 +94,14 @@ void requestCb() {
 
 void setup() {
   sizeErr=sizeof(errors[0]);
+  InitEEPROM();
+  
   pinMode(PIN_L_Control, OUTPUT);
   pinMode(PIN_R_Control, OUTPUT);
-  //Serial.begin(9600);
-  InitEEPROM();
-  //SaveError(301);
-  //LogError(301);
+  
+  Serial.begin(9600);
+  
   Wire.begin(SLAVE_ADDR);
-
   Wire.onReceive(receiveCb);
   Wire.onRequest(requestCb);
 }
@@ -119,12 +114,12 @@ void loop() {
     ClickHardware(1);
   }
 
-  if(!isVoid && !isOnline && lastMessage==0 && millis()>30000)
+  if(!isVoid && !isOnline && lastMessage==0 && millis()>I2C_NoInputTimeOut)
   {
     isVoid=true;
     SaveError(301);
   }
-  if(!isVoid && isOnline && millis()-lastMessage>30000)
+  if(!isVoid && isOnline && millis()-lastMessage>I2C_NoInputTimeOut)
   {
     isOnline=false;
     isVoid=true;
