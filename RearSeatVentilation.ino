@@ -1,7 +1,7 @@
 #include <EEPROM.h>
 #include <Wire.h>
 
-bool isDebug=false;
+bool isDebug=true;
 bool isTest=false;
 
 // адрес
