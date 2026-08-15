@@ -2,7 +2,7 @@
 
 bool isDebug=true;
 bool isTest=false;
-int testTimer=0;
+uint32_t testTimer=0;
 
 I2CSlave slave;
 
@@ -56,7 +56,7 @@ void loop() {
     } else if (command == "test") {
       isTest = !isTest;
       Serial.println(isTest ? "Тест включён" : "Тест выключен");
-    } else {
+    }  else {
       Serial.println("Команды: mode0 | mode1 | test");
     }
   }
