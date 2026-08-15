@@ -5,7 +5,6 @@ bool isTest=false;
 int testTimer=0;
 
 I2CSlave slave;
-void SaveError(uint8_t code);
 
 #define PIN_L_Control 5
 #define PIN_R_Control 6
@@ -20,37 +19,13 @@ byte highSpeed=255;
 byte modeSpeed[]={0, lowSpeed, midSpeed, highSpeed};
 byte modeSeq[]={0, 3, 2, 1};
 
-//Ошибки в памяти
-struct Error{
-  uint8_t code=0;
-  uint32_t tfs=0;
-  uint8_t times=0;
-}__attribute__((packed));
-Error errors[1];
-int sizeErr;
-int errLen;
-int nextError=0;
-
-struct ErrorDesc {
-    uint8_t code;
-    const char* description;
-};
-const ErrorDesc errorDescriptions[] PROGMEM = {
-    {21,   "Smth went wrong"},
-    {0,   ""}   // terminator (обязательно в конце!)
-};
-
 void setup() {
   Serial.begin(115200);
-  InitEEPROM();
   
   pinMode(PIN_L_Control, OUTPUT);
   pinMode(PIN_R_Control, OUTPUT);
   
   slave.onCommand(REG_PING, cmdPing);
-  slave.onCommand(REG_GetErrorCount, cmdGetErrorCount);
-  slave.onCommand(REG_GetNextError, cmdGetError);
-  slave.onCommand(REG_ClearErrors, cmdClearErrors);
   slave.onCommand(REG_L_MODE, cmdMode);
   slave.onCommand(REG_R_MODE, cmdMode);
   slave.onCommand(REG_L_GetStatus, cmdGetStatus);
@@ -81,26 +56,8 @@ void loop() {
     } else if (command == "test") {
       isTest = !isTest;
       Serial.println(isTest ? "Тест включён" : "Тест выключен");
-    } else if (command == "eeprom init") {
-      Serial.println("Сброс памяти к заводским настройкам...");
-      FirstInit();
-      LoadErrors();
-      Serial.println("Готово");
-    } else if (command == "eeprom read") {
-      Serial.println("Вывод содержимого памяти...");
-      LoadErrors();
-      for(int i=0;i<errLen;i++)
-      {
-        Serial.print("#");
-        Serial.print(errors[i].code);
-        Serial.print("|");
-        Serial.print(errors[i].times);
-        Serial.print("|");
-        Serial.println(errors[i].tfs);
-      }
-      Serial.println("Готово");
     } else {
-      Serial.println("Команды: mode0 | mode1 | test | eeprom init | eeprom read");
+      Serial.println("Команды: mode0 | mode1 | test");
     }
   }
   delay(5);
@@ -185,45 +142,6 @@ void cmdGetStatus(const uint8_t* buf, uint8_t len) {
 }
 
 void cmdPing(const uint8_t*, uint8_t) {
-  slave.respondByte(0x01);
-}
-
-void cmdGetErrorCount(const uint8_t*, uint8_t) {
-  Serial.print("cmdGetErrorCount: ");
-  uint8_t count = 0;
-  for (uint8_t i = 0; i < errLen; i++)
-      if (errors[i].times > 0) count++;
-  uint8_t resp[2]={1, count};
-  Serial.println(count);
-  slave.respond(resp, sizeof(resp));
-}
-
-void cmdGetError(const uint8_t* buf, uint8_t len) {
-  Serial.print("getError #");
-  uint8_t index = (len >= 2) ? buf[1] : 0;
-  Serial.println(index);
-  uint8_t found = 0;
-  for (uint8_t i = 0; i < errLen; i++) {
-    if (errors[i].times == 0) continue;
-    if (found++ == index) {
-      Serial.print("Code: ");
-      Serial.println(errors[i].code);
-      uint8_t resp[7];
-      resp[0] = 1;
-      resp[1] = errors[i].code;
-      memcpy(&resp[2], &errors[i].tfs, 4);
-      resp[6] = errors[i].times;
-      slave.respond(resp, 7);
-      return;
-    }
-  }
-  uint8_t resp[7] = {};
-  slave.respond(resp, 7);
-}
-
-void cmdClearErrors(const uint8_t*, uint8_t) {
-  Serial.println("cmdClearErrors");
-  ClearAllErrors();
   slave.respondByte(0x01);
 }
 
